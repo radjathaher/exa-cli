@@ -22,11 +22,11 @@ const MCP_TOOLS: [&str; 9] = [
 #[derive(Parser)]
 #[command(name = "exa", about = "Exa CLI")]
 struct Cli {
-    #[arg(long, env = "EXA_API_KEY", global = true)]
+    #[arg(long, global = true)]
     api_key: Option<String>,
 
-    #[arg(long, env = "EXA_API_BASE", default_value = DEFAULT_API_BASE, global = true)]
-    api_base: String,
+    #[arg(long, global = true)]
+    api_base: Option<String>,
 
     #[arg(long, global = true)]
     pretty: bool,
@@ -166,8 +166,15 @@ async fn run() -> Result<()> {
         return handle_mcp(&cmd.command);
     }
 
-    let api_key = cli.api_key.context("EXA_API_KEY missing")?;
-    let api_base = cli.api_base.trim_end_matches('/');
+    let api_key = cli
+        .api_key
+        .or_else(|| std::env::var("EXA_API_KEY").ok())
+        .context("EXA_API_KEY missing")?;
+    let api_base = cli
+        .api_base
+        .or_else(|| std::env::var("EXA_API_BASE").ok())
+        .unwrap_or_else(|| DEFAULT_API_BASE.to_string());
+    let api_base = api_base.trim_end_matches('/');
     let timeout = Duration::from_secs(cli.timeout.unwrap_or(30));
     let client = Client::builder().timeout(timeout).build()?;
 
